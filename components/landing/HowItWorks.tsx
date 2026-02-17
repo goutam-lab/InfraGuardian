@@ -37,8 +37,7 @@ export default function HowItWorks() {
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="py-32 px-6 relative overflow-hidden">
-            {/* Background elements */}
+        <section ref={ref} id="how-it-works" className="py-32 px-6 relative overflow-hidden">
             <div className="absolute top-1/2 left-0 w-72 h-72 bg-accent-green/10 rounded-full blur-3xl" />
             <div className="absolute bottom-0 right-0 w-72 h-72 bg-critical/10 rounded-full blur-3xl" />
 
@@ -58,7 +57,6 @@ export default function HowItWorks() {
                 </motion.div>
 
                 <div className="relative">
-                    {/* Connecting line */}
                     <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-accent-green via-warning to-critical hidden lg:block" />
 
                     {steps.map((step, index) => {
@@ -67,19 +65,9 @@ export default function HowItWorks() {
                         const stepInView = useInView(stepRef, { once: true, margin: "-100px" });
 
                         return (
-                            <motion.div
-                                key={index}
-                                ref={stepRef}
-                                initial="hidden"
-                                animate={stepInView ? "visible" : "hidden"}
-                                className="relative mb-16 last:mb-0"
-                            >
+                            <motion.div key={index} ref={stepRef} initial="hidden" animate={stepInView ? "visible" : "hidden"} className="relative mb-16 last:mb-0">
                                 <div className={`flex flex-col lg:flex-row items-center gap-8 ${step.side === 'right' ? 'lg:flex-row-reverse' : ''}`}>
-                                    {/* Content */}
-                                    <motion.div
-                                        variants={step.side === 'left' ? slideInLeft : slideInRight}
-                                        className="flex-1 glass-card glass-card-hover rounded-2xl p-8"
-                                    >
+                                    <motion.div variants={step.side === 'left' ? slideInLeft : slideInRight} className="flex-1 glass-card glass-card-hover rounded-2xl p-8">
                                         <div className="flex items-start gap-4">
                                             <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-accent-green to-dark-green flex items-center justify-center flex-shrink-0">
                                                 <Icon className="w-8 h-8 text-black" />
@@ -91,14 +79,7 @@ export default function HowItWorks() {
                                             </div>
                                         </div>
                                     </motion.div>
-
-                                    {/* Center dot */}
-                                    <motion.div
-                                        variants={fadeInUp}
-                                        className="hidden lg:flex w-4 h-4 rounded-full bg-gradient-to-br from-accent-green to-dark-green border-4 border-black flex-shrink-0 z-10"
-                                    />
-
-                                    {/* Spacer for alignment */}
+                                    <motion.div variants={fadeInUp} className="hidden lg:flex w-4 h-4 rounded-full bg-gradient-to-br from-accent-green to-dark-green border-4 border-black flex-shrink-0 z-10" />
                                     <div className="flex-1 hidden lg:block" />
                                 </div>
                             </motion.div>

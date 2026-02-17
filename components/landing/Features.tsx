@@ -43,8 +43,7 @@ export default function Features() {
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="py-32 px-6 relative">
-            {/* Background gradient */}
+        <section ref={ref} id="features" className="py-32 px-6 relative">
             <div className="absolute inset-0 bg-gradient-to-b from-black via-dark-green/10 to-black" />
 
             <motion.div
@@ -71,14 +70,12 @@ export default function Features() {
                                 variants={staggerItem}
                                 className="group glass-card glass-card-hover rounded-2xl p-8 relative overflow-hidden"
                             >
-                                {/* Hover gradient effect */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-accent-green/0 to-accent-green/0 group-hover:from-accent-green/10 group-hover:to-dark-green/10 transition-all duration-500" />
 
                                 <div className="relative z-10">
                                     <div className="w-14 h-14 rounded-xl bg-accent-green/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-accent-green/20 transition-all duration-300">
                                         <Icon className="w-7 h-7 text-accent-green" />
                                     </div>
-
                                     <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
                                     <p className="text-gray-400 leading-relaxed">{feature.description}</p>
                                 </div>
