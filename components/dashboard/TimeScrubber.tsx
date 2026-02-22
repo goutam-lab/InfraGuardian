@@ -6,19 +6,18 @@ export const TimeScrubber = () => {
   const { predictionHorizon, setPredictionHorizon } = useDashboardStore();
 
   return (
-    <div className="mt-6 space-y-2 px-2">
-      <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500 font-bold">
-        <span>Present</span>
-        <span>Forecast: +{predictionHorizon}m</span>
-        <span>+60m</span>
+    <div className="w-full bg-slate-900/60 p-4 rounded-xl border border-white/5 backdrop-blur-md">
+      <div className="flex justify-between mb-2">
+        <label className="text-[10px] font-bold text-slate-500 uppercase">Prediction Horizon</label>
+        <span className="text-xs font-mono text-blue-400">{predictionHorizon} Minutes</span>
       </div>
       <input
         type="range"
-        min="0"
-        max="60"
+        min="5"
+        max="120"
         value={predictionHorizon}
         onChange={(e) => setPredictionHorizon(parseInt(e.target.value))}
-        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+        className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
       />
     </div>
   );

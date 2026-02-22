@@ -15,24 +15,25 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const groqApiKey = Deno.env.get('GROQ_API_KEY')
     
-    if (!groqApiKey) throw new Error('GROQ_API_KEY is not set.')
+    if (!groqApiKey) throw new Error('GROQ_API_KEY is not set in secrets.')
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const { record } = await req.json()
+    const body = await req.json()
+    const record = body.record || body 
 
     if (!record || !record.project_id) {
       throw new Error('No record or project_id provided.')
     }
 
-    console.log(`Analyzing project: ${record.project_id}`)
-
-    // Fetch history for drift analysis
-    const { data: history } = await supabase
+    const { data: logData, error: dbError } = await supabase
       .from('system_metrics_logs')
-      .select('message, level, created_at')
+      .select('message, level')
       .eq('project_id', record.project_id)
       .order('created_at', { ascending: false })
       .limit(5)
+
+    if (dbError) throw new Error(`Database fetch error: ${dbError.message}`)
+    const history = logData || []
 
     const aiResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -41,7 +42,8 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192",
+        // FIX: Replaced decommissioned llama3-8b-8192 with llama-3.3-70b-versatile
+        model: "llama-3.3-70b-versatile", 
         messages: [
           { 
             role: "system", 
@@ -58,14 +60,13 @@ Deno.serve(async (req) => {
 
     const aiData = await aiResponse.json()
 
-    // Safety check for the "undefined reading 0" error
+    if (aiData.error) throw new Error(`AI Provider Error: ${aiData.error.message}`)
     if (!aiData.choices || aiData.choices.length === 0) {
       throw new Error('AI returned no choices.')
     }
 
     const prediction = JSON.parse(aiData.choices[0].message.content)
 
-    // Insert into predictions table
     const { error: insertError } = await supabase
       .from('predictions')
       .insert([{

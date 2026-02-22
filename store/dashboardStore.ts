@@ -7,8 +7,7 @@ import { createClient } from '@/supabase/client';
 
 /**
  * Extended Store Interface
- * Includes predictionHorizon for the Time-Scrubber and 
- * helper functions for real-time data ingestion.
+ * Includes logic for Behavioral Drift calculation and Real-time syncing.
  */
 interface DashboardStore extends DashboardState {
     predictionHorizon: number;
@@ -17,16 +16,15 @@ interface DashboardStore extends DashboardState {
     addMetric: (type: keyof DashboardState['metrics'], metric: SystemMetric) => void;
     setFailureProbability: (probability: number) => void;
     subscribeToUpdates: (projectId: string) => void;
+    getDriftVariance: (type: 'cpu' | 'latency') => number;
 }
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
-    // Initialize with mock data to ensure UI elements have values on first load
+    // Initialize with mock data for instant UI layout rendering
     ...getMockDashboardState(),
     
-    // Time-Scrubber state
-    predictionHorizon: 30, // Default to 30 minutes in the future
+    predictionHorizon: 30,
     
-    // Actions for manual state updates
     setPredictionHorizon: (value: number) => set({ predictionHorizon: value }),
 
     updateMetrics: () => {
@@ -34,8 +32,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     },
 
     /**
-     * Pushes new metrics into the history array and updates current value.
-     * Limits history to the last 60 points to maintain performance.
+     * Pushes new telemetry into history and updates current values.
+     * Limits history to 60 points to maintain chart performance.
      */
     addMetric: (type, metric) => set((state) => {
         const newHistory = [...state.metrics[type].history, metric].slice(-60);
@@ -56,14 +54,29 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     },
 
     /**
+     * Logic: Calculates the variance between the most recent value 
+     * and the average of the last 10 telemetry points.
+     */
+    getDriftVariance: (type: 'cpu' | 'latency') => {
+        const history = get().metrics[type].history;
+        if (history.length < 10) return 0;
+
+        const last10 = history.slice(-10);
+        const avg = last10.reduce((acc, curr) => acc + curr.value, 0) / last10.length;
+        const current = history[history.length - 1].value;
+
+        return avg === 0 ? 0 : Math.abs((current - avg) / avg);
+    },
+
+    /**
      * Real-time Synchronization Engine
-     * Connects to Supabase to listen for new system logs and AI predictions.
+     * Listens for telemetry logs and AI Agent predictions from Supabase.
      */
     subscribeToUpdates: (projectId) => {
         const supabase = createClient();
         
         // 1. Channel for live telemetry (CPU, Latency, etc.)
-        supabase
+        const telemetrySub = supabase
             .channel('realtime_metrics')
             .on('postgres_changes', 
                 { 
@@ -76,20 +89,20 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
                     const data = payload.new;
                     // Update CPU metrics
                     get().addMetric('cpu', { 
-                        timestamp: Date.parse(data.created_at), 
-                        value: data.cpu_usage 
+                        timestamp: Date.now(), 
+                        value: data.cpu_usage || 0 
                     });
                     // Update Latency metrics
                     get().addMetric('latency', { 
-                        timestamp: Date.parse(data.created_at), 
-                        value: data.latency_ms 
+                        timestamp: Date.now(), 
+                        value: data.latency_ms || 0 
                     });
                 }
             )
             .subscribe();
 
         // 2. Channel for AI Agent Analysis results
-        supabase
+        const predictionSub = supabase
             .channel('realtime_predictions')
             .on('postgres_changes', 
                 { 
@@ -99,16 +112,21 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
                     filter: `project_id=eq.${projectId}` 
                 },
                 (payload) => {
+                    const { probability, analysis, severity } = payload.new;
                     set({ 
-                        failureProbability: payload.new.probability,
-                        // Drift is detected if failure risk exceeds 50%
-                        driftDetected: payload.new.probability > 0.5,
-                        driftSeverity: payload.new.probability > 0.8 ? 'high' : 'medium',
-                        // Updates the active model status with the AI's latest analysis
-                        activeModel: payload.new.analysis 
+                        failureProbability: probability,
+                        driftDetected: probability > 0.5,
+                        driftSeverity: (severity?.toLowerCase() === 'critical' || probability > 0.8) ? 'high' : 'medium',
+                        activeModel: analysis 
                     });
                 }
             )
             .subscribe();
+
+        // Cleanup function for useEffect
+        return () => {
+            supabase.removeChannel(telemetrySub);
+            supabase.removeChannel(predictionSub);
+        };
     }
-}));
+}));    

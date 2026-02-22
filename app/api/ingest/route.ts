@@ -5,24 +5,51 @@ export async function POST(req: Request) {
   try {
     const supabase = await createClient();
     const body = await req.json();
+    
+    // 1. Extract telemetry data from the request
+    const { project_id, level, message, latency_ms, cpu_usage } = body;
 
-    // Extracting data based on Vercel Log Drain format or custom middleware
-    const { project_id, cpu, memory, latency, status, message } = body;
+    if (!project_id) {
+      return NextResponse.json({ error: 'Missing project_id' }, { status: 400 });
+    }
 
-    const { error } = await supabase.from('system_metrics_logs').insert([{
-      project_id,
-      cpu_usage: cpu,
-      memory_usage: memory,
-      latency_ms: latency,
-      status_code: status,
-      message: message,
-      level: status >= 500 ? 'CRITICAL' : (status >= 400 ? 'WARNING' : 'INFO')
-    }]);
+    // 2. Insert the log into system_metrics_logs
+    const { data: logEntry, error: logError } = await supabase
+      .from('system_metrics_logs')
+      .insert([{ 
+        project_id, 
+        level: level || 'INFO', 
+        message, 
+        latency_ms: latency_ms || 0, 
+        cpu_usage: cpu_usage || 0 
+      }])
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (logError) throw logError;
 
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    return NextResponse.json({ error: 'Failed to ingest logs' }, { status: 500 });
+    // 3. Trigger the AI Agent (Edge Function) automatically
+    // We use the internal network URL if possible, or the public one
+    const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/analyze-logs`;
+    
+    // Fire and forget: We don't await this so the API response stays fast
+    fetch(edgeFunctionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+      },
+      body: JSON.stringify({ record: logEntry })
+    }).catch(err => console.error("AI Automation Trigger Failed:", err));
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "Telemetry ingested and AI analysis triggered",
+      data: logEntry 
+    });
+
+  } catch (error: any) {
+    console.error("Ingestion Error:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,48 +1,55 @@
 "use client";
 
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { generateDriftData } from '@/lib/mockData';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const BehavioralDrift = () => {
-  const data = generateDriftData(); // Currently uses mock; will pull from AI predictions
+  const { metrics, failureProbability } = useDashboardStore();
+  
+  // Combine CPU and Latency history into chart-friendly data
+  const chartData = metrics.cpu.history.map((point, index) => ({
+    time: new Date(point.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    cpu: point.value,
+    latency: metrics.latency.history[index]?.value || 0,
+    risk: (failureProbability || 0) * 100 
+  }));
 
   return (
-    <div className="h-full w-full p-4 bg-slate-900/40 rounded-2xl border border-white/5">
-      <h3 className="text-xs font-bold text-slate-500 uppercase mb-4">Behavioral Drift Analysis</h3>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
-          <defs>
-            <linearGradient id="driftGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3}/>
-              <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="time" hide />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px' }} 
-            labelStyle={{ color: '#94A3B8' }}
-          />
-          
-          {/* Normal Path: Baseline expected behavior */}
-          <Area 
-            type="monotone" 
-            dataKey="normal" 
-            stroke="#10B981" 
-            fill="transparent" 
-            strokeDasharray="5 5"
-          />
-          
-          {/* Drift Path: The actual divergence detected by AI */}
-          <Area 
-            type="monotone" 
-            dataKey="drift" 
-            stroke="#EF4444" 
-            fill="url(#driftGradient)" 
-            strokeWidth={3}
-            animationDuration={2000}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+    <div className="h-full w-full bg-slate-900/40 p-4 rounded-2xl border border-white/5">
+      <h3 className="text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest">Behavioral Drift</h3>
+      <div className="h-[200px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <XAxis dataKey="time" hide />
+            <YAxis hide domain={[0, 100]} />
+            <Tooltip 
+              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
+              itemStyle={{ fontSize: '12px' }}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="risk" 
+              stroke="#ef4444" 
+              fillOpacity={1} 
+              fill="url(#colorRisk)" 
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-4 flex justify-between items-center border-t border-white/5 pt-4">
+        <span className="text-[10px] text-slate-500 font-mono">STABILITY BASELINE</span>
+        <span className="text-[10px] text-red-500 font-mono font-bold">
+          DRIFT: {((failureProbability || 0) * 100).toFixed(1)}%
+        </span>
+      </div>
     </div>
   );
 };
