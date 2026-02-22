@@ -1,1 +1,4 @@
+# ONLY ignore the Deno Edge Functions folder
 supabase/
+
+# DO NOT ignore lib/supabase (this was the mistake)
