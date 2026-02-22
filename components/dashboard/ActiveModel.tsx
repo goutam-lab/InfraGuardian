@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
-import { createClient } from '@/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 export const ActiveModel = () => {
   const [prediction, setPrediction] = useState("Analyzing Patterns...");

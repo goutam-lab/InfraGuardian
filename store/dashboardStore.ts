@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { DashboardState, SystemMetric } from '@/types';
 import { getMockDashboardState } from '@/lib/mockData';
-import { createClient } from '@/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 /**
  * Extended Store Interface

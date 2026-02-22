@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import GlassCard from '@/components/ui/GlassCard'
 import Navbar from '@/components/layout/Navbar'
