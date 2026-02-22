@@ -25,7 +25,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     // Initialize real-time listeners for logs and AI predictions
-    const unsubscribe = subscribeToUpdates(PROJECT_ID);
+    const unsubscribe = subscribeToUpdates(PROJECT_ID) as (() => void) | undefined;
     
     // Cleanup subscriptions on unmount
     return () => {
