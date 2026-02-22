@@ -1,37 +1,80 @@
 "use client";
 
-import GlassCard from "@/components/ui/GlassCard";
-import { useDashboardStore } from "@/store/dashboardStore";
-import { AlertTriangle } from "lucide-react";
+import { useDashboardStore } from '@/store/dashboardStore';
+import { motion } from 'framer-motion';
 
-export default function FailureProbability() {
-    const { failureProbability } = useDashboardStore();
+export const FailureProbability = () => {
+  const { failureProbability } = useDashboardStore();
+  
+  // Calculate stroke dash array for the circle (Circumference = 2 * PI * r)
+  const radius = 80;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (failureProbability * circumference);
 
-    const percentage = (failureProbability * 100).toFixed(2);
-    const riskLevel = failureProbability < 0.05 ? 'Low' : failureProbability < 0.15 ? 'Medium' : 'High';
-    const riskColor = failureProbability < 0.05 ? 'text-success' : failureProbability < 0.15 ? 'text-warning' : 'text-critical';
+  // Determine color based on probability thresholds
+  const getColor = (prob: number) => {
+    if (prob < 0.3) return '#10B981'; // Emerald (Healthy)
+    if (prob < 0.7) return '#F59E0B'; // Amber (Drift)
+    return '#EF4444'; // Red (Failure Imminent)
+  };
 
-    return (
-        <GlassCard>
-            <div className="flex flex-col h-full">
-                <h3 className="text-sm text-gray-400 mb-3">Failure Probability</h3>
+  const statusColor = getColor(failureProbability);
 
-                <div className="flex-1 flex flex-col items-center justify-center">
-                    <div className={`text-4xl font-bold font-mono ${riskColor}`}>
-                        {percentage}%
-                    </div>
-                    <div className={`text-sm font-semibold mt-2 uppercase tracking-wide ${riskColor}`}>
-                        {riskLevel} Risk
-                    </div>
-                </div>
+  return (
+    <div className="flex flex-col items-center justify-center p-6 bg-slate-900/40 rounded-2xl border border-white/5 h-full relative overflow-hidden">
+      <h3 className="text-xs font-bold text-slate-500 uppercase mb-8 tracking-widest">Failure Probability</h3>
+      
+      <div className="relative flex items-center justify-center">
+        {/* Background Track */}
+        <svg className="transform -rotate-90 w-48 h-48">
+          <circle
+            cx="96"
+            cy="96"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="12"
+            fill="transparent"
+            className="text-slate-800"
+          />
+          {/* Progress Circle */}
+          <motion.circle
+            cx="96"
+            cy="96"
+            r={radius}
+            stroke={statusColor}
+            strokeWidth="12"
+            fill="transparent"
+            strokeDasharray={circumference}
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 8px ${statusColor}44)` }}
+          />
+        </svg>
 
-                {failureProbability >= 0.05 && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-warning">
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>Monitor closely</span>
-                    </div>
-                )}
-            </div>
-        </GlassCard>
-    );
-}
+        {/* Center Text */}
+        <div className="absolute flex flex-col items-center">
+          <motion.span 
+            className="text-4xl font-black text-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            {(failureProbability * 100).toFixed(1)}%
+          </motion.span>
+          <span className="text-[10px] text-slate-400 font-medium uppercase mt-1">
+            Risk Level
+          </span>
+        </div>
+      </div>
+
+      {/* AI Confidence Indicator */}
+      <div className="mt-8 flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full animate-pulse`} style={{ backgroundColor: statusColor }} />
+        <span className="text-[11px] text-slate-300 font-semibold uppercase">
+          AI Status: {failureProbability > 0.7 ? 'Critical Alert' : 'Monitoring'}
+        </span>
+      </div>
+    </div>
+  );
+};
