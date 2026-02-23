@@ -1,4 +1,5 @@
-# ONLY ignore the Deno Edge Functions folder
+# Correct .vercelignore
+# This ignores the folder containing Edge Functions and migrations
 supabase/
 
-# DO NOT ignore lib/supabase (this was the mistake)
+# Ensure there are NO other lines mentioned 'lib' or 'supabase/' with leading slashes
